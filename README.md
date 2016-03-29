@@ -3,7 +3,7 @@ Dapper Multi-Mapper - a simple object mapper for join
 
 See also
 -------------
-[link](https://github.com/stackexchange/dapper-dot-net/)
+[Dapper](https://github.com/stackexchange/dapper-dot-net/)
 
 Execute a query and map the results to a strongly typed List
 ------------------------------------------------------------

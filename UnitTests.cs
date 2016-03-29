@@ -132,7 +132,7 @@ join FILE_ENTRY f on f.PACK_ID=p.ID";
 						if (pack.FILES == null)
 							pack.FILES = new List<FILE_ENTRY>();
 						pack.FILES.Add(file);
-					}, f => f.PACK_ID, 
+					}, f => f.PACK_ID,
 
 					splitOn: "PACK_ID").ToList();
 			}
@@ -262,7 +262,7 @@ join FILE_ENTRY f on f.PACK_ID=p.ID";
 						if (registry.PACKS == null)
 							registry.PACKS = new List<PACK_ENTRY>();
 						registry.PACKS.Add(pack);
-					}, p => p.REGISTRY_ID, 
+					}, p => p.REGISTRY_ID,
 
 					(pack, file) =>
 					{
@@ -372,7 +372,7 @@ select PACK_ID,ID,NO,SNILS from FILE_ENTRY;";
 					(
 						r => r.ID, (registry, packs) => { registry.PACKS = packs.ToList(); },
 						p => p.REGISTRY_ID,
-						
+
 						p => p.ID, (pack, files) => { pack.FILES = files.ToList(); },
 						f => f.PACK_ID
 					).ToList();
