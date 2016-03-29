@@ -278,6 +278,111 @@ join FILE_ENTRY f on f.PACK_ID=p.ID";
 
 		#endregion
 
+		#region QueryMultiple
+
+		private static PACK_ENTRY GetPack(string id)
+		{
+			const string sql =
+@"select
+    p.ID,p.GU_CODE,p.NO
+
+    ,f.PACK_ID
+    ,f.ID,f.NO,f.SNILS
+from PACK_ENTRY p
+join FILE_ENTRY f on f.PACK_ID=p.ID
+where p.ID=?";
+
+			PACK_ENTRY entry;
+			using (var db = new DB2StorageData(Log))
+			{
+				entry = db.Conn.Query<PACK_ENTRY, FILE_ENTRY, string>(sql,
+
+					(pack, file) =>
+					{
+						if (pack.FILES == null)
+							pack.FILES = new List<FILE_ENTRY>();
+						pack.FILES.Add(file);
+					}, f => f.PACK_ID,
+
+					param: new { id },
+
+					splitOn: "PACK_ID").FirstOrDefault();
+			}
+			return entry;
+		}
+
+		[Test]
+		public void QueryMutiple()
+		{
+			const string sql =
+@"select ID,GU_CODE,NO from PACK_ENTRY where ID='BBFDX';
+select PACK_ID,ID,NO,SNILS from FILE_ENTRY where PACK_ID='BBFDX';";
+
+			var expected = GetPack("BBFDX");
+			PACK_ENTRY actual;
+			using (var db = new DB2StorageData(Log))
+			{
+				using (var result = db.Conn.QueryMultiple(sql))
+				{
+					actual = result.Read<PACK_ENTRY>().Single();
+					actual.FILES = result.Read<FILE_ENTRY>().ToList();
+				}
+			}
+			AreEquivalent(expected, actual);
+		}
+
+		[Test]
+		public void QueryOneMutipleWithChild()
+		{
+			const string sql =
+@"select ID,GU_CODE,NO from PACK_ENTRY;
+select PACK_ID,ID,NO,SNILS from FILE_ENTRY;";
+
+			var expected = GetOneJoin();
+			List<PACK_ENTRY> actual;
+			using (var db = new DB2StorageData(Log))
+			{
+				using (var result = db.Conn.QueryMultiple(sql))
+				{
+					actual = result.Read<PACK_ENTRY, FILE_ENTRY, string>
+					(
+						p => p.ID, (pack, files) => { pack.FILES = files.ToList(); },
+						f => f.PACK_ID
+					).ToList();
+				}
+			}
+			AreEquivalent(expected, actual);
+		}
+
+		[Test]
+		public void QueryTwoMutipleWithChild()
+		{
+			const string sql =
+@"select ID,INCOME,GU_CODE,NO,SIGNED from REGISTRY_ENTRY;
+select REGISTRY_ID,ID,GU_CODE,NO from PACK_ENTRY where REGISTRY_ID is not null;
+select PACK_ID,ID,NO,SNILS from FILE_ENTRY;";
+
+			var expected = GetTwoJoin();
+			List<REGISTRY_ENTRY> actual;
+			using (var db = new DB2StorageData(Log))
+			{
+				using (var result = db.Conn.QueryMultiple(sql))
+				{
+					actual = result.Read<REGISTRY_ENTRY, PACK_ENTRY, FILE_ENTRY, string, string>
+					(
+						r => r.ID, (registry, packs) => { registry.PACKS = packs.ToList(); },
+						p => p.REGISTRY_ID,
+						
+						p => p.ID, (pack, files) => { pack.FILES = files.ToList(); },
+						f => f.PACK_ID
+					).ToList();
+				}
+			}
+			AreEquivalent(expected, actual);
+		}
+
+		#endregion
+
 		#region AreEquivalent
 
 		private static void AreEquivalent(ICollection<REGISTRY_ENTRY> expected, ICollection<REGISTRY_ENTRY> actual)

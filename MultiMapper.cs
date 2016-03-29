@@ -134,5 +134,69 @@ namespace Dapper
 				.AsQueryable();
 			return firstLookup.Values;
 		}
+
+
+
+
+		public static IEnumerable<TFirst> Read<TFirst, TSecond, TFirstKey>(
+			this SqlMapper.GridReader reader,
+			Func<TFirst, TFirstKey> firstKey,
+			Action<TFirst, IEnumerable<TSecond>> addChildrenToFirst,
+			Func<TSecond, TFirstKey> secondKey)
+		{
+			var firstLookup = reader.Read<TFirst>().ToList();
+			var secondLookup = reader
+				.Read<TSecond>()
+				.GroupBy(s => secondKey(s))
+				.ToDictionary(g => g.Key, g => g.AsEnumerable());
+
+			foreach (var first in firstLookup)
+			{
+				IEnumerable<TSecond> secondChildren;
+				if (secondLookup.TryGetValue(firstKey(first), out secondChildren))
+				{
+					addChildrenToFirst(first, secondChildren);
+				}
+			}
+			return firstLookup;
+		}
+
+		public static IEnumerable<TFirst> Read<TFirst, TSecond, TThird, TKeyFirst, TKeySecond>(
+			this SqlMapper.GridReader reader,
+			Func<TFirst, TKeyFirst> firstKey,
+			Action<TFirst, IEnumerable<TSecond>> addChildrenIntoFirst,
+			Func<TSecond, TKeyFirst> secondKey,
+			Func<TSecond, TKeySecond> thirdKey,
+			Action<TSecond, IEnumerable<TThird>> addChildrenIntoSecond,
+			Func<TThird, TKeySecond> fourthKey)
+		{
+			var firstLookup = reader.Read<TFirst>().ToList();
+			var secondLookup = reader
+				.Read<TSecond>()
+				.GroupBy(s => secondKey(s))
+				.ToDictionary(g => g.Key, g => g.AsEnumerable());
+			var thirdLookup = reader
+				.Read<TThird>()
+				.GroupBy(s => fourthKey(s))
+				.ToDictionary(g => g.Key, g => g.AsEnumerable());
+
+			foreach (var first in firstLookup)
+			{
+				IEnumerable<TSecond> secondChildren;
+				if (secondLookup.TryGetValue(firstKey(first), out secondChildren))
+				{
+					foreach (var second in secondChildren)
+					{
+						IEnumerable<TThird> thirdChildren;
+						if (thirdLookup.TryGetValue(thirdKey(second), out thirdChildren))
+						{
+							addChildrenIntoSecond(second, thirdChildren);
+						}
+					}
+					addChildrenIntoFirst(first, secondChildren);
+				}
+			}
+			return firstLookup;
+		}
 	}
 }
